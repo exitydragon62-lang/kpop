@@ -135,7 +135,6 @@ function fixPlat(){plats.forEach(p=>{if(hit(P,p))P.y=p.y-P.h})}
 function jump(){
   if(st!=='PLAY'||P.dash)return;
   if(P.ridingCar){
-    // Pular para fora do carro antes do tempo
     P.vy=-12;
     P.g=false;
     P.ridingCar=null;
@@ -251,11 +250,9 @@ function update(){
     en.forEach(e=>{if(e.alive&&hit(P,e))damageEnemy(e,true)});
   }else{
     if(P.ridingCar){
-      // Acompanha o movimento do carro
       P.x += P.ridingCar.vx;
       P.y = P.ridingCar.y - P.h;
       if(now >= P.rideTimer){
-        // Joga o player para cima após 1 segundo
         P.vy = -14;
         P.g = false;
         P.ridingCar = null;
@@ -278,7 +275,6 @@ function update(){
     }});
   }
   
-  // Carros na rua das fases 3 até 6 (lvl 2 a 5)
   if(lvl >= 2 && lvl < 6) {
     if(tick % 160 === 0 && cars.length < 3) {
       let dir = Math.random() < 0.5 ? 1 : -1;
@@ -287,7 +283,8 @@ function update(){
         x: startX, y: 335, w: 90, h: 38,
         vx: dir * (4.5 + Math.random()*2.5),
         col: ['#e74c3c','#3498db','#f1c40f','#9b59b6','#e67e22'][Math.floor(Math.random()*5)],
-        dir: dir
+        dir: dir,
+        isKiller: Math.random() < 0.5
       });
     }
   }
@@ -295,19 +292,25 @@ function update(){
   cars.forEach(car => {
     car.x += car.vx;
     
-    // Verificar colisão com o teto do carro para pegar carona
     let roofBox = {x: car.x + 10, y: car.y - 4, w: car.w - 20, h: 8};
     if(!P.dash && !P.ridingCar && P.vy > 0 && hit(P, roofBox) && P.y + P.h - P.vy <= car.y + 4) {
       P.ridingCar = car;
-      P.rideTimer = Date.now() + 1000; // 1 segundo de carona
+      P.rideTimer = Date.now() + 1000;
       P.y = car.y - P.h;
       P.vy = 0;
       P.g = true;
     }
 
-    // Dano se bater de lado/frente e não estiver em cima
     if(!P.dash && !P.safe && !P.ridingCar && hit(P, car)) {
       if(!P.inv) dmg(1);
+    }
+
+    if(car.isKiller) {
+      en.forEach(e => {
+        if(e.alive && hit(car, e)) {
+          damageEnemy(e, true);
+        }
+      });
     }
   });
 
