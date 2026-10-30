@@ -104,7 +104,6 @@ function spawn(x){
 
 function loadLevel(i){
   lvl=i;const L=LV[i];
-  // Apenas o chão principal (sem plataformas flutuantes)
   plats=[{x:0,y:380,w:W,h:70}];
   en=[];cars=[];wv=[];tick=0;camX=0;
   L.en.forEach(a=>spawn(a[0]));
@@ -113,7 +112,7 @@ function loadLevel(i){
 
 function start(){
   const c=CH[hero];
-  P={x:80,y:332,w:24,h:48,s:1,vx:0,vy:0,g:false,hp:3,f:1,punch:0,punchCombo:0,punchCooldown:0,claw:0,inv:0,safe:0,sc:0,dash:0,dEnd:0,mon:0,mEnd:0,spd:c.spd,jmp:c.jmp};
+  P={x:80,y:332,w:24,h:48,s:1,vx:0,vy:0,g:false,hp:3,f:1,punch:0,punchCombo:0,punchCooldown:0,claw:0,inv:0,safe:0,sc:0,dash:0,dEnd:0,mon:0,mEnd:0,spd:c.spd,jmp:c.jmp,ridingCar:null,rideTimer:0};
   kills=0;K.l=K.r=0;
   const col=hero==='purple'?'#c06cf0':hero==='red'?'#ff4444':'#5a9bff';
   $('spf').style.background=col;$('bs').style.background=col+'99';
@@ -132,8 +131,18 @@ function hud(){
 }
 
 const hit=(a,b)=>a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y;
-function fixPlat(){plats.forEach((p,i)=>{if(hit(P,p))P.y=p.y-P.h})}
-function jump(){if(st==='PLAY'&&P.g&&!P.dash){P.vy=P.jmp*(P.mon?1.15:1);P.g=false}}
+function fixPlat(){plats.forEach(p=>{if(hit(P,p))P.y=p.y-P.h})}
+function jump(){
+  if(st!=='PLAY'||P.dash)return;
+  if(P.ridingCar){
+    // Pular para fora do carro antes do tempo
+    P.vy=-12;
+    P.g=false;
+    P.ridingCar=null;
+    return;
+  }
+  if(P.g){P.vy=P.jmp*(P.mon?1.15:1);P.g=false}
+}
 
 function punch(){
   if(st!=='PLAY'||P.dash||P.punchCooldown>0)return;
@@ -241,13 +250,26 @@ function update(){
     P.vx=P.f*P.spd*2;P.vy=0;P.y=380-P.h;P.g=true;P.inv=0;
     en.forEach(e=>{if(e.alive&&hit(P,e))damageEnemy(e,true)});
   }else{
-    P.vx=K.l?-P.spd:K.r?P.spd:0;
-    if(P.vx)P.f=P.vx>0?1:-1;
-    P.vy+=.5;
+    if(P.ridingCar){
+      // Acompanha o movimento do carro
+      P.x += P.ridingCar.vx;
+      P.y = P.ridingCar.y - P.h;
+      if(now >= P.rideTimer){
+        // Joga o player para cima após 1 segundo
+        P.vy = -14;
+        P.g = false;
+        P.ridingCar = null;
+      }
+    } else {
+      P.vx=K.l?-P.spd:K.r?P.spd:0;
+      if(P.vx)P.f=P.vx>0?1:-1;
+      P.vy+=.5;
+      P.x+=P.vx;
+    }
   }
-  P.x+=P.vx;
   P.x=Math.max(0,Math.min(W-P.w,P.x));
-  if(!P.dash){
+  
+  if(!P.dash && !P.ridingCar){
     plats.forEach(p=>{if(hit(P,p)){P.x=P.vx>0?p.x-P.w:P.vx<0?p.x+p.w:P.x}});
     P.y+=P.vy;P.g=false;
     plats.forEach(p=>{if(hit(P,p)){
@@ -269,12 +291,26 @@ function update(){
       });
     }
   }
+
   cars.forEach(car => {
     car.x += car.vx;
-    if(!P.dash && !P.safe && hit(P, car)) {
+    
+    // Verificar colisão com o teto do carro para pegar carona
+    let roofBox = {x: car.x + 10, y: car.y - 4, w: car.w - 20, h: 8};
+    if(!P.dash && !P.ridingCar && P.vy > 0 && hit(P, roofBox) && P.y + P.h - P.vy <= car.y + 4) {
+      P.ridingCar = car;
+      P.rideTimer = Date.now() + 1000; // 1 segundo de carona
+      P.y = car.y - P.h;
+      P.vy = 0;
+      P.g = true;
+    }
+
+    // Dano se bater de lado/frente e não estiver em cima
+    if(!P.dash && !P.safe && !P.ridingCar && hit(P, car)) {
       if(!P.inv) dmg(1);
     }
   });
+
   cars = cars.filter(car => car.x > camX - 300 && car.x < camX + 1100);
 
   const L=LV[lvl];
