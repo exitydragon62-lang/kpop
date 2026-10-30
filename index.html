@@ -58,7 +58,6 @@ canvas{display:block;width:100%;height:100%}
 <script>
 const cv=document.getElementById('c'),ctx=cv.getContext('2d'),$=id=>document.getElementById(id);
 const W=3400,EXIT=3250,STUDIO=1100;
-// Adjusted lower speeds
 const CH={purple:{col:'#9b4de0',spd:3.8,jmp:-10.5,reach:0},red:{col:'#e02d2d',spd:3.2,jmp:-11,reach:42},blue:{col:'#2f7bff',spd:2.8,jmp:-11.5,reach:60}};
 const TYPE={purple:'blue',red:'purple',blue:'red'};
 const LV=[
@@ -86,7 +85,20 @@ $('resetSave').onclick=()=>{
   alert('Progresso do herói ' + hero + ' resetado!');
 };
 
-function spawn(x,p){en.push({x,y:p[1]-46,w:26,h:46,vx:(Math.random()<.5?-1:1)*(1+Math.random()*.6),min:Math.max(p[0]+4,x-150),max:Math.min(p[0]+p[2]-30,x+150),pmin:p[0]+4,pmax:p[0]+p[2]-30,alive:1,ch:0,col:['#16213e','#1b1b1b','#2c3e50'][Math.floor(Math.random()*3)]})}
+function spawn(x,p){
+  // Da fase 3 em diante, alguns inimigos podem ser Guardas Vermelhos (precisam de 2 hits)
+  let isGuard = lvl >= 2 && Math.random() < 0.35;
+  en.push({
+    x, y: p[1]-46, w: 26, h: 46,
+    vx: (Math.random()<.5?-1:1)*(1+Math.random()*.6),
+    min: Math.max(p[0]+4,x-150), max: Math.min(p[0]+p[2]-30,x+150),
+    pmin: p[0]+4, pmax: p[0]+p[2]-30,
+    alive: 1, ch: 0,
+    isGuard: isGuard,
+    hp: isGuard ? 2 : 1,
+    col: isGuard ? '#b82828' : ['#16213e','#1b1b1b','#2c3e50'][Math.floor(Math.random()*3)]
+  });
+}
 
 function loadLevel(i){
   lvl=i;const L=LV[i];
@@ -103,7 +115,6 @@ function start(){
   const col=hero==='purple'?'#c06cf0':hero==='red'?'#ff4444':'#5a9bff';
   $('spf').style.background=col;$('bs').style.background=col+'99';
   
-  // Load saved level for this character
   let saved = getSavedLvl();
   if(saved >= LV.length) saved = 0;
   loadLevel(saved);
@@ -132,19 +143,22 @@ function punch(){
   } else {
     const r=CH[hero].reach*P.s;
     const b={x:P.f>0?P.x+P.w:P.x-r,y:P.y,w:r+P.w,h:P.h};
-    en.forEach(e=>{if(e.alive&&hit(b,e))kill(e)});
+    en.forEach(e=>{if(e.alive&&hit(b,e)) damageEnemy(e)});
   }
 
   if(P.punchCombo>=3){
-    P.punchCooldown=120; // 2 seconds at 60fps
+    P.punchCooldown=120; // 2 segundos de cooldown
     P.punchCombo=0;
   }
 }
 
-function kill(e,nc){
-  e.alive=0;kills++;
-  if(hero==='red')P.claw=16;
-  if(!nc&&P.sc<5&&!P.dash&&!P.mon){P.sc++;hud()}
+function damageEnemy(e,nc){
+  e.hp--;
+  if(e.hp<=0){
+    e.alive=0;kills++;
+    if(hero==='red')P.claw=16;
+    if(!nc&&P.sc<5&&!P.dash&&!P.mon){P.sc++;hud()}
+  }
 }
 
 function startMon(){
@@ -223,7 +237,7 @@ function update(){
   if(P.mon&&now>=P.mEnd)endMon();
   if(P.dash){
     P.vx=P.f*P.spd*2;P.vy=0;P.y=380-P.h;P.g=true;P.inv=0;
-    en.forEach(e=>{if(e.alive&&hit(P,e))kill(e)});
+    en.forEach(e=>{if(e.alive&&hit(P,e))damageEnemy(e,true)});
   }else{
     P.vx=K.l?-P.spd:K.r?P.spd:0;
     if(P.vx)P.f=P.vx>0?1:-1;
@@ -246,7 +260,7 @@ function update(){
   }
   wv=wv.filter(w=>{
     w.x+=w.vx;w.life--;
-    en.forEach(e=>{if(e.alive&&w.life>0&&hit(w,e)){kill(e,w.big);if(!w.big)w.life=0}});
+    en.forEach(e=>{if(e.alive&&w.life>0&&hit(w,e)){damageEnemy(e,w.big);if(!w.big)w.life=0}});
     return w.life>0;
   });
   en.forEach(e=>{
@@ -255,7 +269,7 @@ function update(){
     if(e.ch){const d=P.x>e.x?1:-1;e.x=Math.max(e.pmin,Math.min(e.pmax,e.x+d*2.1));e.vx=d*Math.abs(e.vx)}
     else{e.x+=e.vx;if(e.x<=e.min||e.x>=e.max)e.vx*=-1}
     if(!P.dash&&!P.safe&&hit(P,e)){
-      if(P.vy>1&&P.y+P.h-e.y<18){kill(e);P.vy=-7}
+      if(P.vy>1&&P.y+P.h-e.y<18){damageEnemy(e);P.vy=-7}
       else if(!P.inv)dmg(1);
     }
   });
@@ -316,6 +330,10 @@ function guard(e){
   ctx.fillStyle='#f0c8a0';ctx.beginPath();ctx.arc(x+13,y+9,7,0,7);ctx.fill();
   ctx.fillStyle=e.col;ctx.fillRect(x+5,y,16,5);
   ctx.fillStyle='#000';ctx.fillRect(x+4,y+4,18,2);ctx.fillRect(x+7,y+8,12,3);
+  if(e.isGuard){
+    // Detalhe extra no capacete do guarda vermelho para diferenciá-lo
+    ctx.fillStyle='#ffcc00';ctx.fillRect(x+9,y+1,8,2);
+  }
   if(e.ch){ctx.fillStyle='#f33';ctx.font='bold 20px monospace';ctx.fillText('!',x+9,y-5)}
 }
 function bg1(){
