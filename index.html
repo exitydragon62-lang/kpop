@@ -61,13 +61,13 @@ const W=3400,EXIT=3250,STUDIO=1100;
 const CH={purple:{col:'#9b4de0',spd:3.8,jmp:-10.5,reach:0},red:{col:'#e02d2d',spd:3.2,jmp:-11,reach:42},blue:{col:'#2f7bff',spd:2.8,jmp:-11.5,reach:60}};
 const TYPE={purple:'blue',red:'purple',blue:'red'};
 const LV=[
- {name:"FASE 1: Estúdio", plat:[[0,380,W],[350,310,130],[750,280,140],[1300,310,150],[1700,285,160],[2150,310,150],[2550,290,160],[2900,320,140]],en:[[550,0],[850,0],[1400,0],[1780,4],[2000,0],[2300,0],[2630,6],[2980,0]],gap:140,max:6},
- {name:"FASE 2: Ruas do Bairro", plat:[[0,380,W],[300,310,140],[700,285,150],[1100,310,140],[1450,280,160],[1850,310,150],[2250,285,150],[2650,310,140],[2950,285,130]],en:[[450,0],[700,0],[760,2],[1000,0],[1250,0],[1500,4],[1700,0],[1900,5],[2150,0],[2330,6],[2500,0],[2700,0],[3000,0]],gap:80,max:10},
- {name:"FASE 3: Praça Central", plat:[[0,380,W],[350,300,150],[800,270,160],[1350,300,150],[1800,275,170],[2300,300,160],[2700,280,150]],en:[[400,0],[750,1],[1100,0],[1450,2],[1850,3],[2200,4],[2600,5],[2950,0]],gap:90,max:8},
- {name:"FASE 4: Zona Comercial", plat:[[0,380,W],[280,320,130],[650,290,140],[1050,310,150],[1500,285,140],[1950,310,160],[2400,280,150],[2850,305,140]],en:[[350,0],[600,1],[950,2],[1250,3],[1650,1],[2050,4],[2450,2],[2800,5],[3100,0]],gap:85,max:10},
- {name:"FASE 5: Avenida dos Arcos", plat:[[0,380,W],[320,310,140],[750,280,150],[1200,310,140],[1650,285,160],[2100,310,150],[2600,285,150]],en:[[400,0],[700,2],[1100,1],[1500,3],[1900,4],[2300,1],[2750,5],[3050,0]],gap:80,max:11},
- {name:"FASE 6: Praia da Metrópole", plat:[[0,380,W],[300,300,150],[720,275,160],[1180,300,150],[1620,275,160],[2080,300,150],[2550,275,160],[2950,300,140]],en:[[450,0],[850,1],[1250,2],[1650,3],[2050,4],[2450,5],[2850,1],[3100,0]],gap:75,max:12},
- {name:"FASE 7: O Restaurante", plat:[[0,380,W],[300,310,140],[750,285,150],[1200,310,150],[1650,280,160],[2100,310,150],[2550,285,150],[2950,310,130]],en:[[400,0],[700,0],[1100,0],[1500,0],[1900,0],[2300,0],[2700,0],[3050,0]],gap:80,max:10}
+ {name:"FASE 1: Estúdio", en:[[550,380],[850,380],[1400,380],[1780,380],[2000,380],[2300,380],[2630,380],[2980,380]],gap:140,max:6},
+ {name:"FASE 2: Ruas do Bairro", en:[[450,380],[700,380],[1000,380],[1250,380],[1500,380],[1700,380],[1900,380],[2150,380],[2500,380],[2700,380],[3000,380]],gap:80,max:10},
+ {name:"FASE 3: Praça Central", en:[[400,380],[750,380],[1100,380],[1450,380],[1850,380],[2200,380],[2600,380],[2950,380]],gap:90,max:8},
+ {name:"FASE 4: Zona Comercial", en:[[350,380],[600,380],[950,380],[1250,380],[1650,380],[2050,380],[2450,380],[2800,380],[3100,380]],gap:85,max:10},
+ {name:"FASE 5: Avenida dos Arcos", en:[[400,380],[700,380],[1100,380],[1500,380],[1900,380],[2300,380],[2750,380],[3050,380]],gap:80,max:11},
+ {name:"FASE 6: Praia da Metrópole", en:[[450,380],[850,380],[1250,380],[1650,380],[2050,380],[2450,380],[2850,380],[3100,380]],gap:75,max:12},
+ {name:"FASE 7: O Restaurante", en:[[400,380],[700,380],[1100,380],[1500,380],[1900,380],[2300,380],[2700,380],[3050,380]],gap:80,max:10}
 ];
 let st='MENU',hero='purple',camX=0,tick=0,kills=0,lvl=0;
 let P,plats,en,cars=[],wv=[],K={l:0,r:0};
@@ -86,14 +86,14 @@ $('resetSave').onclick=()=>{
   alert('Progresso do herói ' + hero + ' resetado!');
 };
 
-function spawn(x,p){
+function spawn(x){
   let isRestaurante = (lvl === 6);
   let isGuard = !isRestaurante && lvl >= 2 && Math.random() < 0.35;
   en.push({
-    x, y: p[1]-46, w: 26, h: 46,
+    x, y: 380-46, w: 26, h: 46,
     vx: (Math.random()<.5?-1:1)*(1+Math.random()*.6),
-    min: Math.max(p[0]+4,x-150), max: Math.min(p[0]+p[2]-30,x+150),
-    pmin: p[0]+4, pmax: p[0]+p[2]-30,
+    min: Math.max(10,x-150), max: Math.min(W-40,x+150),
+    pmin: 10, pmax: W-40,
     alive: 1, ch: 0,
     isRestaurante: isRestaurante,
     isGuard: isGuard,
@@ -104,15 +104,16 @@ function spawn(x,p){
 
 function loadLevel(i){
   lvl=i;const L=LV[i];
-  plats=L.plat.map(p=>({x:p[0],y:p[1],w:p[2],h:p[1]==380?70:20}));
+  // Apenas o chão principal (sem plataformas flutuantes)
+  plats=[{x:0,y:380,w:W,h:70}];
   en=[];cars=[];wv=[];tick=0;camX=0;
-  L.en.forEach(a=>spawn(a[0],L.plat[a[1]]));
-  P.x=80;P.y=250;P.vx=0;P.vy=0;P.safe=60;
+  L.en.forEach(a=>spawn(a[0]));
+  P.x=80;P.y=332;P.vx=0;P.vy=0;P.safe=60;
 }
 
 function start(){
   const c=CH[hero];
-  P={x:80,y:250,w:24,h:48,s:1,vx:0,vy:0,g:false,hp:3,f:1,punch:0,punchCombo:0,punchCooldown:0,claw:0,inv:0,safe:0,sc:0,dash:0,dEnd:0,mon:0,mEnd:0,spd:c.spd,jmp:c.jmp};
+  P={x:80,y:332,w:24,h:48,s:1,vx:0,vy:0,g:false,hp:3,f:1,punch:0,punchCombo:0,punchCooldown:0,claw:0,inv:0,safe:0,sc:0,dash:0,dEnd:0,mon:0,mEnd:0,spd:c.spd,jmp:c.jmp};
   kills=0;K.l=K.r=0;
   const col=hero==='purple'?'#c06cf0':hero==='red'?'#ff4444':'#5a9bff';
   $('spf').style.background=col;$('bs').style.background=col+'99';
@@ -131,7 +132,7 @@ function hud(){
 }
 
 const hit=(a,b)=>a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y;
-function fixPlat(){plats.forEach((p,i)=>{if(i&&hit(P,p))P.y=p.y-P.h})}
+function fixPlat(){plats.forEach((p,i)=>{if(hit(P,p))P.y=p.y-P.h})}
 function jump(){if(st==='PLAY'&&P.g&&!P.dash){P.vy=P.jmp*(P.mon?1.15:1);P.g=false}}
 
 function punch(){
@@ -221,7 +222,7 @@ $('nx').onclick=()=>{
     loadLevel(lvl);
     st='PLAY';
   } else {
-    st='WIN';$('wt').textContent='Seguranças e Garçons derrotados: '+kills;$('win').style.display='flex';
+    st='WIN';$('wt').textContent='Inimigos derrotados: '+kills;$('win').style.display='flex';
   }
 };
 
@@ -247,20 +248,25 @@ function update(){
   P.x+=P.vx;
   P.x=Math.max(0,Math.min(W-P.w,P.x));
   if(!P.dash){
-    plats.forEach((p,i)=>{if(P.mon&&i)return;if(hit(P,p)){P.x=P.vx>0?p.x-P.w:P.vx<0?p.x+p.w:P.x}});
+    plats.forEach(p=>{if(hit(P,p)){P.x=P.vx>0?p.x-P.w:P.vx<0?p.x+p.w:P.x}});
     P.y+=P.vy;P.g=false;
-    plats.forEach((p,i)=>{if(P.mon&&i)return;if(hit(P,p)){
+    plats.forEach(p=>{if(hit(P,p)){
       if(P.vy>0){P.y=p.y-P.h;P.vy=0;P.g=true}
       else if(P.vy<0){P.y=p.y+p.h;P.vy=0}
     }});
   }
   
-  // Carros passando na rua a partir da fase 3 (lvl >= 2)
+  // Carros na rua das fases 3 até 6 (lvl 2 a 5)
   if(lvl >= 2 && lvl < 6) {
-    if(tick % 180 === 0 && cars.length < 3) {
+    if(tick % 160 === 0 && cars.length < 3) {
       let dir = Math.random() < 0.5 ? 1 : -1;
-      let startX = dir > 0 ? camX - 150 : camX + 950;
-      cars.push({x: startX, y: 345, w: 70, h: 30, vx: dir * (4 + Math.random()*2), col: ['#e74c3c','#3498db','#f1c40f','#2ecc71'][Math.floor(Math.random()*4)]});
+      let startX = dir > 0 ? camX - 180 : camX + 950;
+      cars.push({
+        x: startX, y: 335, w: 90, h: 38,
+        vx: dir * (4.5 + Math.random()*2.5),
+        col: ['#e74c3c','#3498db','#f1c40f','#9b59b6','#e67e22'][Math.floor(Math.random()*5)],
+        dir: dir
+      });
     }
   }
   cars.forEach(car => {
@@ -273,8 +279,8 @@ function update(){
 
   const L=LV[lvl];
   if(tick%L.gap===0&&en.filter(e=>e.alive).length<L.max){
-    const lo=camX+830,cand=plats.filter(p=>p.x+p.w>lo+40&&p.x<lo+300&&p.w>=130);
-    if(cand.length){const p=cand[Math.floor(Math.random()*cand.length)];const x=Math.max(lo,p.x+10);if(x<EXIT-120)spawn(x,[p.x,p.y,p.w])}
+    const lo=camX+830;
+    if(lo < EXIT-120) spawn(lo);
   }
   wv=wv.filter(w=>{
     w.x+=w.vx;w.life--;
@@ -339,15 +345,13 @@ function stick(x,y,col,f,pun,reach,type,mon){
 function guard(e){
   const x=e.x-camX,y=e.y;
   if(e.isRestaurante) {
-    // Garçom do Restaurante (Roupa social preta e branca com bandeja)
     ctx.fillStyle='#111';
     ctx.fillRect(x+4,y+28,8,18);ctx.fillRect(x+14,y+28,8,18);
-    ctx.fillStyle='#fff'; ctx.fillRect(x+4,y+14,18,16); // Camisa branca
-    ctx.fillStyle='#000'; ctx.fillRect(x+11,y+14,4,16); // terno/gravata
-    ctx.fillStyle='#f0c8a0';ctx.beginPath();ctx.arc(x+13,y+8,7,0,7);ctx.fill(); // cabeça
-    ctx.fillStyle='#222'; ctx.fillRect(x+5,y,16,4); // cabelo
-    // Bandeja na mão
-    ctx.fillStyle='#ccc'; ctx.fillRect(x+e.vx>0?20:-10,y+18,14,3);
+    ctx.fillStyle='#fff'; ctx.fillRect(x+4,y+14,18,16);
+    ctx.fillStyle='#000'; ctx.fillRect(x+11,y+14,4,16);
+    ctx.fillStyle='#f0c8a0';ctx.beginPath();ctx.arc(x+13,y+8,7,0,7);ctx.fill();
+    ctx.fillStyle='#222'; ctx.fillRect(x+5,y,16,4);
+    ctx.fillStyle='#ccc'; ctx.fillRect(e.vx>0?x+20:x-10,y+18,14,3);
   } else {
     ctx.fillStyle=e.col;
     ctx.fillRect(x+4,y+30,8,16);ctx.fillRect(x+14,y+30,8,16);
@@ -426,28 +430,40 @@ function draw(){
   else bgRestaurante();
 
   if(!P||!plats)return;
-  plats.forEach((p,i)=>{
+  plats.forEach(p=>{
     const x=p.x-camX;
-    if(!i){
-      if(lvl===6){ctx.fillStyle='#543319';ctx.fillRect(x,p.y,p.w,p.h);ctx.fillStyle='#3d220f';ctx.fillRect(x,p.y,p.w,8);}
-      else if(lvl===0){ctx.fillStyle='#222';ctx.fillRect(x,p.y,p.w,p.h);ctx.fillStyle='#888';ctx.fillRect(x,p.y,p.w,5);}
-      else{ctx.fillStyle='#454550';ctx.fillRect(x,p.y,p.w,p.h);ctx.fillStyle='#a8a8a8';ctx.fillRect(x,p.y,p.w,10);}
-    } else {
-      // Plataformas elevadas modernas (sem madeira)
-      ctx.fillStyle=lvl===6?'#704214':'#34495e';
-      ctx.fillRect(x,p.y,p.w,p.h);
-      ctx.strokeStyle=lvl===6?'#4a2c0c':'#1abc9c';ctx.lineWidth=2;ctx.strokeRect(x,p.y,p.w,p.h);
-    }
+    if(lvl===6){ctx.fillStyle='#543319';ctx.fillRect(x,p.y,p.w,p.h);ctx.fillStyle='#3d220f';ctx.fillRect(x,p.y,p.w,8);}
+    else if(lvl===0){ctx.fillStyle='#222';ctx.fillRect(x,p.y,p.w,p.h);ctx.fillStyle='#888';ctx.fillRect(x,p.y,p.w,5);}
+    else{ctx.fillStyle='#454550';ctx.fillRect(x,p.y,p.w,p.h);ctx.fillStyle='#a8a8a8';ctx.fillRect(x,p.y,p.w,10);}
   });
 
-  // Desenhar carros se estiver na rua
   cars.forEach(car => {
     let cx = car.x - camX;
     ctx.fillStyle = car.col;
-    ctx.fillRect(cx, car.y, car.w, car.h);
+    ctx.fillRect(cx, car.y + 10, car.w, car.h - 10);
+    ctx.fillRect(cx + 20, car.y, car.w - 40, 12);
+    ctx.fillStyle = 'rgba(173, 216, 230, 0.8)';
+    if(car.dir > 0) {
+      ctx.fillRect(cx + car.w - 32, car.y + 2, 12, 10);
+    } else {
+      ctx.fillRect(cx + 20, car.y + 2, 12, 10);
+    }
     ctx.fillStyle = '#111';
-    ctx.fillRect(cx+10, car.y+car.h, 12, 6);
-    ctx.fillRect(cx+car.w-22, car.y+car.h, 12, 6);
+    ctx.beginPath();
+    ctx.arc(cx + 20, car.y + car.h, 7, 0, 7);
+    ctx.arc(cx + car.w - 20, car.y + car.h, 7, 0, 7);
+    ctx.fill();
+    ctx.fillStyle = '#aaa';
+    ctx.beginPath();
+    ctx.arc(cx + 20, car.y + car.h, 3, 0, 7);
+    ctx.arc(cx + car.w - 20, car.y + car.h, 3, 0, 7);
+    ctx.fill();
+    ctx.fillStyle = '#ff3';
+    if(car.dir > 0) {
+      ctx.fillRect(cx + car.w - 4, car.y + 14, 4, 6);
+    } else {
+      ctx.fillRect(cx, car.y + 14, 4, 6);
+    }
   });
 
   en.forEach(e=>{if(e.alive)guard(e)});
