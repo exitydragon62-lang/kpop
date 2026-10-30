@@ -66,10 +66,11 @@ const LV=[
  {name:"FASE 3: Praça Central", plat:[[0,380,W],[350,300,150],[800,270,160],[1350,300,150],[1800,275,170],[2300,300,160],[2700,280,150]],en:[[400,0],[750,1],[1100,0],[1450,2],[1850,3],[2200,4],[2600,5],[2950,0]],gap:90,max:8},
  {name:"FASE 4: Zona Comercial", plat:[[0,380,W],[280,320,130],[650,290,140],[1050,310,150],[1500,285,140],[1950,310,160],[2400,280,150],[2850,305,140]],en:[[350,0],[600,1],[950,2],[1250,3],[1650,1],[2050,4],[2450,2],[2800,5],[3100,0]],gap:85,max:10},
  {name:"FASE 5: Avenida dos Arcos", plat:[[0,380,W],[320,310,140],[750,280,150],[1200,310,140],[1650,285,160],[2100,310,150],[2600,285,150]],en:[[400,0],[700,2],[1100,1],[1500,3],[1900,4],[2300,1],[2750,5],[3050,0]],gap:80,max:11},
- {name:"FASE 6: Praia da Metrópole", plat:[[0,380,W],[300,300,150],[720,275,160],[1180,300,150],[1620,275,160],[2080,300,150],[2550,275,160],[2950,300,140]],en:[[450,0],[850,1],[1250,2],[1650,3],[2050,4],[2450,5],[2850,1],[3100,0]],gap:75,max:12}
+ {name:"FASE 6: Praia da Metrópole", plat:[[0,380,W],[300,300,150],[720,275,160],[1180,300,150],[1620,275,160],[2080,300,150],[2550,275,160],[2950,300,140]],en:[[450,0],[850,1],[1250,2],[1650,3],[2050,4],[2450,5],[2850,1],[3100,0]],gap:75,max:12},
+ {name:"FASE 7: O Restaurante", plat:[[0,380,W],[300,310,140],[750,285,150],[1200,310,150],[1650,280,160],[2100,310,150],[2550,285,150],[2950,310,130]],en:[[400,0],[700,0],[1100,0],[1500,0],[1900,0],[2300,0],[2700,0],[3050,0]],gap:80,max:10}
 ];
 let st='MENU',hero='purple',camX=0,tick=0,kills=0,lvl=0;
-let P,plats,en,wv=[],K={l:0,r:0};
+let P,plats,en,cars=[],wv=[],K={l:0,r:0};
 
 function getSavedLvl(){return parseInt(localStorage.getItem('kpop_lvl_'+hero)||'0',10);}
 function saveLvl(l){localStorage.setItem('kpop_lvl_'+hero, l.toString());}
@@ -86,24 +87,25 @@ $('resetSave').onclick=()=>{
 };
 
 function spawn(x,p){
-  // Da fase 3 em diante, alguns inimigos podem ser Guardas Vermelhos (precisam de 2 hits)
-  let isGuard = lvl >= 2 && Math.random() < 0.35;
+  let isRestaurante = (lvl === 6);
+  let isGuard = !isRestaurante && lvl >= 2 && Math.random() < 0.35;
   en.push({
     x, y: p[1]-46, w: 26, h: 46,
     vx: (Math.random()<.5?-1:1)*(1+Math.random()*.6),
     min: Math.max(p[0]+4,x-150), max: Math.min(p[0]+p[2]-30,x+150),
     pmin: p[0]+4, pmax: p[0]+p[2]-30,
     alive: 1, ch: 0,
+    isRestaurante: isRestaurante,
     isGuard: isGuard,
     hp: isGuard ? 2 : 1,
-    col: isGuard ? '#b82828' : ['#16213e','#1b1b1b','#2c3e50'][Math.floor(Math.random()*3)]
+    col: isRestaurante ? '#ffffff' : (isGuard ? '#b82828' : ['#16213e','#1b1b1b','#2c3e50'][Math.floor(Math.random()*3)])
   });
 }
 
 function loadLevel(i){
   lvl=i;const L=LV[i];
   plats=L.plat.map(p=>({x:p[0],y:p[1],w:p[2],h:p[1]==380?70:20}));
-  en=[];wv=[];tick=0;camX=0;
+  en=[];cars=[];wv=[];tick=0;camX=0;
   L.en.forEach(a=>spawn(a[0],L.plat[a[1]]));
   P.x=80;P.y=250;P.vx=0;P.vy=0;P.safe=60;
 }
@@ -134,7 +136,6 @@ function jump(){if(st==='PLAY'&&P.g&&!P.dash){P.vy=P.jmp*(P.mon?1.15:1);P.g=fals
 
 function punch(){
   if(st!=='PLAY'||P.dash||P.punchCooldown>0)return;
-  
   P.punch=12;
   P.punchCombo++;
   
@@ -147,7 +148,7 @@ function punch(){
   }
 
   if(P.punchCombo>=3){
-    P.punchCooldown=120; // 2 segundos de cooldown
+    P.punchCooldown=120;
     P.punchCombo=0;
   }
 }
@@ -220,7 +221,7 @@ $('nx').onclick=()=>{
     loadLevel(lvl);
     st='PLAY';
   } else {
-    st='WIN';$('wt').textContent='Seguranças derrotados: '+kills;$('win').style.display='flex';
+    st='WIN';$('wt').textContent='Seguranças e Garçons derrotados: '+kills;$('win').style.display='flex';
   }
 };
 
@@ -253,6 +254,23 @@ function update(){
       else if(P.vy<0){P.y=p.y+p.h;P.vy=0}
     }});
   }
+  
+  // Carros passando na rua a partir da fase 3 (lvl >= 2)
+  if(lvl >= 2 && lvl < 6) {
+    if(tick % 180 === 0 && cars.length < 3) {
+      let dir = Math.random() < 0.5 ? 1 : -1;
+      let startX = dir > 0 ? camX - 150 : camX + 950;
+      cars.push({x: startX, y: 345, w: 70, h: 30, vx: dir * (4 + Math.random()*2), col: ['#e74c3c','#3498db','#f1c40f','#2ecc71'][Math.floor(Math.random()*4)]});
+    }
+  }
+  cars.forEach(car => {
+    car.x += car.vx;
+    if(!P.dash && !P.safe && hit(P, car)) {
+      if(!P.inv) dmg(1);
+    }
+  });
+  cars = cars.filter(car => car.x > camX - 300 && car.x < camX + 1100);
+
   const L=LV[lvl];
   if(tick%L.gap===0&&en.filter(e=>e.alive).length<L.max){
     const lo=camX+830,cand=plats.filter(p=>p.x+p.w>lo+40&&p.x<lo+300&&p.w>=130);
@@ -285,7 +303,7 @@ function update(){
     } else {
       st='WIN';
       saveLvl(LV.length);
-      $('wt').textContent='Seguranças derrotados: '+kills;
+      $('wt').textContent='Inimigos derrotados: '+kills;
       $('win').style.display='flex';
     }
   }
@@ -320,19 +338,30 @@ function stick(x,y,col,f,pun,reach,type,mon){
 }
 function guard(e){
   const x=e.x-camX,y=e.y;
-  ctx.fillStyle=e.col;
-  ctx.fillRect(x+4,y+30,8,16);ctx.fillRect(x+14,y+30,8,16);
-  ctx.fillRect(x+1,y+15,24,17);
-  ctx.fillRect(x-3,y+16,5,14);ctx.fillRect(x+24,y+16,5,14);
-  ctx.fillStyle='#fff';ctx.fillRect(x+10,y+15,6,8);
-  ctx.fillStyle='#111';ctx.fillRect(x+12,y+17,2,12);
-  ctx.fillStyle='#f5c518';ctx.fillRect(x+17,y+20,5,5);
-  ctx.fillStyle='#f0c8a0';ctx.beginPath();ctx.arc(x+13,y+9,7,0,7);ctx.fill();
-  ctx.fillStyle=e.col;ctx.fillRect(x+5,y,16,5);
-  ctx.fillStyle='#000';ctx.fillRect(x+4,y+4,18,2);ctx.fillRect(x+7,y+8,12,3);
-  if(e.isGuard){
-    // Detalhe extra no capacete do guarda vermelho para diferenciá-lo
-    ctx.fillStyle='#ffcc00';ctx.fillRect(x+9,y+1,8,2);
+  if(e.isRestaurante) {
+    // Garçom do Restaurante (Roupa social preta e branca com bandeja)
+    ctx.fillStyle='#111';
+    ctx.fillRect(x+4,y+28,8,18);ctx.fillRect(x+14,y+28,8,18);
+    ctx.fillStyle='#fff'; ctx.fillRect(x+4,y+14,18,16); // Camisa branca
+    ctx.fillStyle='#000'; ctx.fillRect(x+11,y+14,4,16); // terno/gravata
+    ctx.fillStyle='#f0c8a0';ctx.beginPath();ctx.arc(x+13,y+8,7,0,7);ctx.fill(); // cabeça
+    ctx.fillStyle='#222'; ctx.fillRect(x+5,y,16,4); // cabelo
+    // Bandeja na mão
+    ctx.fillStyle='#ccc'; ctx.fillRect(x+e.vx>0?20:-10,y+18,14,3);
+  } else {
+    ctx.fillStyle=e.col;
+    ctx.fillRect(x+4,y+30,8,16);ctx.fillRect(x+14,y+30,8,16);
+    ctx.fillRect(x+1,y+15,24,17);
+    ctx.fillRect(x-3,y+16,5,14);ctx.fillRect(x+24,y+16,5,14);
+    ctx.fillStyle='#fff';ctx.fillRect(x+10,y+15,6,8);
+    ctx.fillStyle='#111';ctx.fillRect(x+12,y+17,2,12);
+    ctx.fillStyle='#f5c518';ctx.fillRect(x+17,y+20,5,5);
+    ctx.fillStyle='#f0c8a0';ctx.beginPath();ctx.arc(x+13,y+9,7,0,7);ctx.fill();
+    ctx.fillStyle=e.col;ctx.fillRect(x+5,y,16,5);
+    ctx.fillStyle='#000';ctx.fillRect(x+4,y+4,18,2);ctx.fillRect(x+7,y+8,12,3);
+    if(e.isGuard){
+      ctx.fillStyle='#ffcc00';ctx.fillRect(x+9,y+1,8,2);
+    }
   }
   if(e.ch){ctx.fillStyle='#f33';ctx.font='bold 20px monospace';ctx.fillText('!',x+9,y-5)}
 }
@@ -351,8 +380,6 @@ function bg1(){
   ctx.fillStyle='#111';ctx.fillRect(STUDIO-12-sx,0,24,380);
   ctx.fillStyle='#b5ab97';ctx.fillRect(STUDIO-sx,340,W-STUDIO,40);
   for(let i=1250;i<EXIT;i+=300){x=i-sx;if(x<-100||x>800)continue;ctx.fillStyle='#fff6c0';ctx.fillRect(x,0,80,8)}
-  for(let i=1300;i<EXIT-150;i+=450){x=i-sx;if(x<-100||x>800)continue;ctx.fillStyle='#7a5230';ctx.fillRect(x,255,60,125);ctx.fillStyle='#e8c84a';ctx.beginPath();ctx.arc(x+50,320,4,0,7);ctx.fill()}
-  for(let i=1525;i<EXIT-150;i+=450){x=i-sx;if(x<-100||x>800)continue;ctx.fillStyle='#222';ctx.fillRect(x-4,100,58,58);ctx.fillStyle='#e8c84a';ctx.beginPath();ctx.arc(x+25,129,22,0,7);ctx.fill();ctx.fillStyle='#222';ctx.beginPath();ctx.arc(x+25,129,5,0,7);ctx.fill()}
   ctx.fillStyle='#3a2f55';ctx.fillRect(-sx,380,STUDIO,70);
   ctx.fillStyle='#6f6a60';ctx.fillRect(STUDIO-sx,380,W-STUDIO,70);
   ctx.fillStyle='rgba(255,255,255,.18)';ctx.fillRect(-sx,380,W,6);
@@ -381,16 +408,48 @@ function bgCity(variant){
   const x=EXIT-sx;ctx.fillStyle='#2a2f3a';ctx.fillRect(x-10,230,90,150);ctx.fillStyle='#111';ctx.fillRect(x,250,70,130);
   ctx.fillStyle='#1fa84a';ctx.fillRect(x-10,205,90,24);ctx.fillStyle='#fff';ctx.font='bold 14px monospace';ctx.fillText('SAÍDA',x+9,222);
 }
+function bgRestaurante(){
+  const sx=camX;
+  ctx.fillStyle='#3a1f1a';ctx.fillRect(0,0,800,380);
+  for(let i=0;i<W;i+=150){const x=i-sx;ctx.fillStyle='#5c3328';ctx.fillRect(x,50,120,200);ctx.fillStyle='#fffae6';ctx.fillRect(x+15,70,90,120);}
+  ctx.fillStyle='#543319';ctx.fillRect(-sx,380,W,70);
+  ctx.fillStyle='#8b5a2b';ctx.fillRect(-sx,380,W,10);
+  const x=EXIT-sx;ctx.fillStyle='#1fa84a';ctx.fillRect(x-10,205,90,24);ctx.fillStyle='#fff';ctx.font='bold 14px monospace';ctx.fillText('SAÍDA',x+9,222);
+}
 function draw(){
   if(lvl===0) bg1();
   else if(lvl===1) bgCity(1);
   else if(lvl===2) bgCity(2);
-  else bgCity(3);
+  else if(lvl===3) bgCity(3);
+  else if(lvl===4) bgCity(1);
+  else if(lvl===5) bgCity(2);
+  else bgRestaurante();
 
   if(!P||!plats)return;
-  plats.forEach((p,i)=>{if(!i)return;const x=p.x-camX;
-    if(lvl===0){ctx.fillStyle='#222';ctx.fillRect(x,p.y,p.w,p.h);ctx.fillStyle='#888';ctx.fillRect(x,p.y,p.w,5);ctx.fillStyle='#444';for(let k=x+8;k<x+p.w-8;k+=12)ctx.fillRect(k,p.y+9,6,8)}
-    else{ctx.fillStyle='#8a5a2b';ctx.fillRect(x,p.y,p.w,p.h);ctx.strokeStyle='#5a3a18';ctx.lineWidth=3;ctx.strokeRect(x+1,p.y+1,p.w-2,p.h-2);ctx.beginPath();ctx.moveTo(x,p.y);ctx.lineTo(x+p.w,p.y+p.h);ctx.stroke()}});
+  plats.forEach((p,i)=>{
+    const x=p.x-camX;
+    if(!i){
+      if(lvl===6){ctx.fillStyle='#543319';ctx.fillRect(x,p.y,p.w,p.h);ctx.fillStyle='#3d220f';ctx.fillRect(x,p.y,p.w,8);}
+      else if(lvl===0){ctx.fillStyle='#222';ctx.fillRect(x,p.y,p.w,p.h);ctx.fillStyle='#888';ctx.fillRect(x,p.y,p.w,5);}
+      else{ctx.fillStyle='#454550';ctx.fillRect(x,p.y,p.w,p.h);ctx.fillStyle='#a8a8a8';ctx.fillRect(x,p.y,p.w,10);}
+    } else {
+      // Plataformas elevadas modernas (sem madeira)
+      ctx.fillStyle=lvl===6?'#704214':'#34495e';
+      ctx.fillRect(x,p.y,p.w,p.h);
+      ctx.strokeStyle=lvl===6?'#4a2c0c':'#1abc9c';ctx.lineWidth=2;ctx.strokeRect(x,p.y,p.w,p.h);
+    }
+  });
+
+  // Desenhar carros se estiver na rua
+  cars.forEach(car => {
+    let cx = car.x - camX;
+    ctx.fillStyle = car.col;
+    ctx.fillRect(cx, car.y, car.w, car.h);
+    ctx.fillStyle = '#111';
+    ctx.fillRect(cx+10, car.y+car.h, 12, 6);
+    ctx.fillRect(cx+car.w-22, car.y+car.h, 12, 6);
+  });
+
   en.forEach(e=>{if(e.alive)guard(e)});
   wv.forEach(w=>{
     const x=w.x-camX,cy=w.y+w.h/2,d=w.vx>0?1:-1;
