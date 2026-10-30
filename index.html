@@ -8,7 +8,7 @@
 *{box-sizing:border-box;user-select:none;-webkit-user-select:none;touch-action:none}
 html,body{height:100%;margin:0}
 body{background:#111;color:#fff;font-family:'Courier New',monospace;display:flex;justify-content:center;align-items:center;overflow:hidden}
-#g{position:relative;width:100%;max-width:800px;aspect-ratio:16/9;max-height:100%;background:#2b2540;overflow:hidden}
+#g{position:relative;width:min(100vw,177.78vh);width:min(100vw,177.78dvh);aspect-ratio:16/9;background:#2b2540;overflow:hidden}
 canvas{display:block;width:100%;height:100%}
 #hud{position:absolute;top:6px;left:8px;right:8px;display:flex;justify-content:space-between;font-weight:bold;text-shadow:2px 2px #000;pointer-events:none;font-size:14px}
 #sp{position:absolute;top:28px;left:8px;width:100px;height:10px;border:2px solid #fff;background:rgba(0,0,0,.5);pointer-events:none}
@@ -31,11 +31,11 @@ canvas{display:block;width:100%;height:100%}
 <div id="g">
   <div id="menu" class="scr">
     <h1>KPOP</h1>
-    <p>Escolha seu herói e chegue na saída!</p>
+    <p>Escolha seu herói e chegue na saída!<br><small>Dica: vire o celular para o modo paisagem 🔄</small></p>
     <div class="cs">
-      <div class="cc sel" data-c="purple"><h3 style="color:#c06cf0">Roxo</h3><small>Gata</small></div>
-      <div class="cc" data-c="red"><h3 style="color:#ff4444">Vermelho</h3><small>Monstra</small></div>
-      <div class="cc" data-c="blue"><h3 style="color:#5a9bff">Azul</h3><small>Cantora</small></div>
+      <div class="cc sel" data-c="purple"><h3 style="color:#c06cf0">Roxo</h3><small>Cantora</small></div>
+      <div class="cc" data-c="red"><h3 style="color:#ff4444">Vermelho</h3><small>Gata</small></div>
+      <div class="cc" data-c="blue"><h3 style="color:#5a9bff">Azul</h3><small>Monstra</small></div>
     </div>
     <button class="btn" id="play">JOGAR</button>
   </div>
@@ -53,7 +53,8 @@ canvas{display:block;width:100%;height:100%}
 <script>
 const cv=document.getElementById('c'),ctx=cv.getContext('2d'),$=id=>document.getElementById(id);
 const W=3400,EXIT=3250,STUDIO=1100;
-const CH={purple:{col:'#9b4de0',spd:4,jmp:-11,reach:28},red:{col:'#e02d2d',spd:3.5,jmp:-11.5,reach:40},blue:{col:'#2f7bff',spd:5,jmp:-10.5,reach:0}};
+const CH={purple:{col:'#9b4de0',spd:5,jmp:-10.5,reach:0},red:{col:'#e02d2d',spd:4,jmp:-11,reach:28},blue:{col:'#2f7bff',spd:3.5,jmp:-11.5,reach:40}};
+const TYPE={purple:'blue',red:'purple',blue:'red'};
 const LV=[
  {plat:[[0,380,W],[350,310,130],[750,280,140],[1300,310,150],[1700,285,160],[2150,310,150],[2550,290,160],[2900,320,140]],en:[[550,0],[850,0],[1400,0],[1780,4],[2000,0],[2300,0],[2630,6],[2980,0]],gap:140,max:6},
  {plat:[[0,380,W],[300,310,140],[700,285,150],[1100,310,140],[1450,280,160],[1850,310,150],[2250,285,150],[2650,310,140],[2950,285,130]],en:[[450,0],[700,0],[760,2],[1000,0],[1250,0],[1500,4],[1700,0],[1900,5],[2150,0],[2330,6],[2500,0],[2700,0],[3000,0]],gap:80,max:10}
@@ -73,7 +74,7 @@ function start(){
   const c=CH[hero];
   P={x:80,y:250,w:24,h:48,s:1,vx:0,vy:0,g:false,hp:3,f:1,punch:0,claw:0,inv:0,safe:0,sc:0,dash:0,dEnd:0,mon:0,mEnd:0,spd:c.spd,jmp:c.jmp};
   kills=0;K.l=K.r=0;
-  const col=hero==='purple'?'#c06cf0':hero==='red'?'#ff4444':'#5ac8ff';
+  const col=hero==='purple'?'#c06cf0':hero==='red'?'#ff4444':'#5a9bff';
   $('spf').style.background=col;$('bs').style.background=col+'99';
   loadLevel(0);hud();
   ['menu','over','win','nxt'].forEach(i=>$(i).style.display='none');st='PLAY';
@@ -89,14 +90,14 @@ function jump(){if(st==='PLAY'&&P.g&&!P.dash){P.vy=P.jmp*(P.mon?1.15:1);P.g=fals
 function punch(){
   if(st!=='PLAY'||P.punch||P.dash)return;
   P.punch=14;
-  if(hero==='blue'){wv.push({x:P.f>0?P.x+P.w:P.x-20,y:P.y+P.h*.28-10,w:20,h:20,vx:P.f*7,life:45,big:0});return}
+  if(hero==='purple'){wv.push({x:P.f>0?P.x+P.w:P.x-20,y:P.y+P.h*.28-10,w:20,h:20,vx:P.f*7,life:45,big:0});return}
   const r=CH[hero].reach*P.s;
   const b={x:P.f>0?P.x+P.w:P.x-r,y:P.y+6*P.s,w:r,h:26*P.s};
   en.forEach(e=>{if(e.alive&&hit(b,e))kill(e)});
 }
 function kill(e,nc){
   e.alive=0;kills++;
-  if(hero==='purple')P.claw=16;
+  if(hero==='red')P.claw=16;
   if(!nc&&P.sc<5&&!P.dash&&!P.mon){P.sc++;hud()}
 }
 function startMon(){
@@ -110,8 +111,8 @@ function endMon(){
 function special(){
   if(st!=='PLAY'||P.sc<5||P.dash||P.mon)return;
   P.sc=0;
-  if(hero==='purple'){P.dash=1;P.inv=0;P.dEnd=Date.now()+2000}
-  else if(hero==='red')startMon();
+  if(hero==='red'){P.dash=1;P.inv=0;P.dEnd=Date.now()+2000}
+  else if(hero==='blue')startMon();
   else wv.push({x:P.f>0?P.x+P.w:P.x-70,y:P.y+P.h-230,w:70,h:230,vx:P.f*9,life:80,big:1});
   hud();
 }
@@ -140,7 +141,11 @@ function bind(id,down,up){
 }
 bind('bl',()=>K.l=1,()=>K.l=0);bind('br',()=>K.r=1,()=>K.r=0);
 bind('bj',jump);bind('bp',punch);bind('bs',special);
-$('play').onclick=start;
+$('play').onclick=()=>{
+  start();
+  try{const r=document.documentElement.requestFullscreen&&document.documentElement.requestFullscreen();
+    if(r&&r.then)r.then(()=>screen.orientation&&screen.orientation.lock&&screen.orientation.lock('landscape')).catch(()=>{});}catch(e){}
+};
 $('nx').onclick=()=>{$('nxt').style.display='none';loadLevel(1);st='PLAY'};
 $('r1').onclick=$('r2').onclick=()=>{$('over').style.display=$('win').style.display='none';$('menu').style.display='flex';st='MENU'};
 
@@ -296,7 +301,7 @@ function draw(){
   if(!(P.inv&&Math.floor(Date.now()/80)%2)){
     ctx.save();ctx.translate(P.x-camX,P.y+P.h);ctx.scale(P.s,P.s);
     if(P.mon){ctx.shadowColor='#f00';ctx.shadowBlur=18}
-    stick(0,-48,CH[hero].col,P.f,P.punch>0||P.claw>0,CH[hero].reach,hero,P.mon);
+    stick(0,-48,CH[hero].col,P.f,P.punch>0||P.claw>0,CH[hero].reach,TYPE[hero],P.mon);
     ctx.restore();
   }
   if(P.dash){
@@ -314,3 +319,4 @@ function draw(){
 </script>
 </body>
 </html>
+
