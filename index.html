@@ -42,11 +42,18 @@ h1{margin:0 0 1.2em;font-size:4.2em;color:#ff7ad9;letter-spacing:.1em;text-shado
 @keyframes pulse{50%{transform:scale(1.08)}}
 .btn-alt{background:#4b4466;color:#fff;box-shadow:0 5px #221d33;font-size:.9em}
 #ctl{position:absolute;bottom:3%;left:2%;right:2%;display:flex;justify-content:space-between;pointer-events:none;z-index:5}
-.grp{display:flex;gap:10px;pointer-events:auto}
+.grp{display:flex;gap:10px;pointer-events:auto;align-items:center}
 .cb{width:clamp(42px,11vw,58px);height:clamp(42px,11vw,58px);border-radius:0;background:rgba(255,255,255,.28);border:2px solid rgba(255,255,255,.7);display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px;transition:transform .08s,background .08s}
 .cb:active,.cb.on{background:rgba(255,255,255,.7);transform:scale(.88)}
+#bj{width:clamp(54px,14vw,74px);height:clamp(54px,14vw,74px);font-size:24px}
+#joy{display:none;position:relative;width:clamp(84px,22vw,116px);height:clamp(84px,22vw,116px);border-radius:50%;background:rgba(255,255,255,.16);border:2px solid rgba(255,255,255,.6);touch-action:none}
+#joy::before{content:"";position:absolute;inset:22%;border-radius:50%;border:2px dashed rgba(255,255,255,.25)}
+#knob{position:absolute;left:50%;top:50%;width:46%;height:46%;margin:-23% 0 0 -23%;border-radius:50%;background:rgba(255,255,255,.65);border:2px solid #fff;pointer-events:none}
+#g.joy #joy{display:block}#g.joy #bl,#g.joy #br{display:none}
 .scr>:first-child{margin-top:auto}.scr>:last-child{margin-bottom:auto}
 @media (max-height:450px){h1{font-size:3em;margin-bottom:.5em}.scr p{margin-bottom:.8em}.cs{margin-bottom:.8em}.cc small{display:none}.btn{padding:.7em 1.4em}}
+.opt{font-size:.75em;padding:.8em 1.2em}
+.opt.on{background:#fc0;color:#000;box-shadow:0 5px #b8860b}
 </style>
 </head>
 <body>
@@ -55,7 +62,7 @@ h1{margin:0 0 1.2em;font-size:4.2em;color:#ff7ad9;letter-spacing:.1em;text-shado
   <div id="hud"><span id="hp"></span><span id="tm">00:00.0</span><span id="pr"></span></div>
   <div id="sp"><div id="spf"></div></div>
   <div id="ctl">
-    <div class="grp"><div class="cb" id="bl">◀</div><div class="cb" id="br">▶</div></div>
+    <div class="grp"><div class="cb" id="bl">◀</div><div class="cb" id="br">▶</div><div id="joy"><div id="knob"></div></div></div>
     <div class="grp"><div class="cb" id="bs">⚡</div><div class="cb" id="bp">👊</div><div class="cb" id="bj">▲</div></div>
   </div>
   <div id="menu" class="scr">
@@ -66,6 +73,7 @@ h1{margin:0 0 1.2em;font-size:4.2em;color:#ff7ad9;letter-spacing:.1em;text-shado
       <div class="cc" data-c="red"><canvas width="90" height="120"></canvas><h3 style="color:#ff4444">Vermelho</h3><small>Gata<br>Garras e turbo</small><span class="st"></span></div>
       <div class="cc" data-c="blue"><canvas width="90" height="120"></canvas><h3 style="color:#5a9bff">Azul</h3><small>Monstra<br>Vira gigante</small><span class="st"></span></div>
     </div>
+    <div class="btn-group" id="ctlSel" style="margin-bottom:1.2em"><button class="btn btn-alt opt on" data-m="arrows">SETAS</button><button class="btn btn-alt opt" data-m="joy">JOYSTICK</button></div>
     <div class="btn-group"><button class="btn" id="play">JOGAR</button><button class="btn btn-alt" id="resetSave">RESETAR SAVE</button></div>
     <p style="margin:1.4em 0 0;font-size:.7em;color:#bbb">Setas/A D mover · W/Espaço pular · K soco · J especial<br>Dica: vire o celular para paisagem</p>
   </div>
@@ -255,6 +263,29 @@ function bind(id,down,up){
   ['touchend','touchcancel','mouseup','mouseleave'].forEach(t=>el.addEventListener(t,e=>{e.preventDefault();el.classList.remove('on');up&&up()},{passive:false}));
 }
 bind('bl',()=>K.l=1,()=>K.l=0);bind('br',()=>K.r=1,()=>K.r=0);bind('bj',jump);bind('bp',punch);bind('bs',special);
+/* controle: setas ou joystick (salvo no aparelho) */
+(function(){
+  const j=$('joy'),k=$('knob');let id=null,up=0;
+  function upd(e){
+    const r=j.getBoundingClientRect(),R=r.width/2,dx=(e.clientX-(r.left+R))/R,dy=(e.clientY-(r.top+R))/R,m=Math.hypot(dx,dy)||1,c=Math.min(1,m),nx=dx/m*c,ny=dy/m*c;
+    k.style.transform='translate('+(nx*R*.55)+'px,'+(ny*R*.55)+'px)';
+    K.l=nx<-.3?1:0;K.r=nx>.3?1:0;
+    if(ny<-.7){if(!up){up=1;jump()}}else up=0;
+  }
+  function end(){id=null;up=0;k.style.transform='';K.l=K.r=0}
+  j.addEventListener('pointerdown',e=>{e.preventDefault();id=e.pointerId;try{j.setPointerCapture(id)}catch(_){}upd(e)});
+  j.addEventListener('pointermove',e=>{if(e.pointerId===id)upd(e)});
+  ['pointerup','pointercancel'].forEach(t=>j.addEventListener(t,e=>{if(e.pointerId===id)end()}));
+  function setCtl(m){
+    try{localStorage.setItem('kpop_ctl',m)}catch(e){}
+    $('g').classList.toggle('joy',m==='joy');
+    document.querySelectorAll('#ctlSel .opt').forEach(b=>b.classList.toggle('on',b.dataset.m===m));
+    K.l=K.r=0;
+  }
+  document.querySelectorAll('#ctlSel .opt').forEach(b=>b.onclick=()=>setCtl(b.dataset.m));
+  let m='arrows';try{m=localStorage.getItem('kpop_ctl')||'arrows'}catch(e){}
+  setCtl(m);
+})();
 $('play').onclick=()=>{
   start();
   try{const r=document.documentElement.requestFullscreen&&document.documentElement.requestFullscreen();
